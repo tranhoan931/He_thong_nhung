@@ -1,62 +1,78 @@
-#include "stm32f10x.h"
+#include <stdint.h>
 
-void GPIO_Config(void);
+/* ================= RCC ================= */
+
+#define RCC_BASE        0x40021000UL
+#define RCC_APB2ENR     (*(volatile uint32_t *)(RCC_BASE + 0x18))
+
+#define RCC_IOPCEN      (1 << 4)
+
+/* ================= GPIOC ================= */
+
+#define GPIOC_BASE      0x40011000UL
+
+#define GPIOC_CRL       (*(volatile uint32_t *)(GPIOC_BASE + 0x00))
+#define GPIOC_CRH       (*(volatile uint32_t *)(GPIOC_BASE + 0x04))
+#define GPIOC_IDR       (*(volatile uint32_t *)(GPIOC_BASE + 0x08))
+#define GPIOC_ODR       (*(volatile uint32_t *)(GPIOC_BASE + 0x0C))
+
 
 int main(void)
 {
-    uint8_t data;
+    uint32_t data;
 
-    GPIO_Config();
+    /* Bật clock GPIOC */
+    RCC_APB2ENR |= RCC_IOPCEN;
+
+    /*
+     * ==========================
+     * PC0 - PC7: INPUT
+     * ==========================
+     *
+     * MODE = 00 -> Input
+     * CNF  = 01 -> Floating input
+     *
+     * Mỗi chân = 0100
+     */
+    GPIOC_CRL = 0x44444444;
+
+
+    /*
+     * ==========================
+     * PC8 - PC15: OUTPUT
+     * ==========================
+     *
+     * MODE = 01 -> Output 10 MHz
+     * CNF  = 00 -> Push-pull
+     *
+     * Mỗi chân = 0001
+     */
+    GPIOC_CRH = 0x11111111;
+
 
     while (1)
     {
-        // Đọc PA0 - PA7
-        data = GPIOA->IDR & 0xFF;
+        /*
+         * Đọc PC0 - PC7
+         */
+        data = GPIOC_IDR & 0xFF;
 
-        // Đảo dữ liệu
-        data = ~data;
 
-        // Chỉ lấy 8 bit
-        data &= 0xFF;
+        /*
+         * Đảo 8 bit
+         */
+        data = (~data) & 0xFF;
 
-        // Xóa PA8 - PA15
-        GPIOA->ODR &= 0x00FF;
 
-        // Ghi dữ liệu vào PA8 - PA15
-        GPIOA->ODR |= ((uint16_t)data << 8);
+        /*
+         * Xóa PC8 - PC15
+         */
+        GPIOC_ODR &= 0x00FF;
+
+
+        /*
+         * Đưa dữ liệu lên PC8 - PC15
+         */
+        GPIOC_ODR |= (data << 8);
     }
-}
-
-
-/*
- * PA0 - PA7  : Input Floating
- * PA8 - PA15 : Output Push-Pull 2 MHz
- */
-void GPIO_Config(void)
-{
-    // Cấp clock GPIOA
-    RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
-
-    /*
-     * CRL:
-     * PA0 - PA7 Input Floating
-     * CNF = 01
-     * MODE = 00
-     *
-     * Mỗi chân = 0x4
-     */
-    GPIOA->CRL = 0x44444444;
-
-    /*
-     * CRH:
-     * PA8 - PA15 Output Push-Pull 2 MHz
-     * MODE = 10
-     * CNF = 00
-     *
-     * Mỗi chân = 0x2
-     */
-    GPIOA->CRH = 0x22222222;
-
-    // Tắt LED
-    GPIOA->ODR &= 0x00FF;
 }
