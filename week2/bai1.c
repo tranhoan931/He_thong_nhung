@@ -78,7 +78,7 @@ int main(void)
     inituart();
     initgpio();
     while(1){
-        received_char = receivechar();
+        received_char = receichar();
         if(received_char == '!'){
             rx_buffer[rx_index] = '\0';
             send_result();
